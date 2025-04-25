@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Garages Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #chatWidget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        #chatToggle {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        #chatToggle:hover {
+            transform: scale(1.1);
+        }
+
+        #chatContainer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            height: 80vh;
+            max-height: 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        #chatHeader {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #closeChat {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        #chatMessages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: calc(40% + 60px); /* Account for form height and input */
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background-color: #4CAF50;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-message {
+            background-color: #f1f1f1;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        #detailsForm {
+            display: none;
+            background-color: #f9f9f9;
+            border-top: 1px solid #eee;
+            animation: slideUp 0.3s ease;
+            position: absolute;
+            bottom: 60px; /* Height of chat input */
+            left: 0;
+            right: 0;
+            height: 40%;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-content {
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        #chatInput {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-top: 1px solid #eee;
+            z-index: 2;
+            height: 60px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        #sendButton {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #sendButton:hover {
+            background-color: #45a049;
+        }
+
+        #submitDetails {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+
+        #submitDetails:hover {
+            background-color: #45a049;
+        }
+
+        /* Responsive design */
+        @media (max-width: 480px) {
+            #chatContainer {
+                width: 95%;
+                height: 90vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="chatWidget">
+        <button id="chatToggle">💬</button>
+    </div>
+
+    <div id="chatContainer">
+        <div id="chatHeader">
+            <h3>Secure Garages Chat</h3>
+            <button id="closeChat">×</button>
+        </div>
+        <div id="chatMessages"></div>
+        <div id="detailsForm">
+            <div class="form-content">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">Address</label>
+                    <input type="text" id="address" required>
+                </div>
+                <div class="form-group">
+                    <label for="issue">Issue Description</label>
+                    <textarea id="issue" required></textarea>
+                </div>
+                <button id="submitDetails">Submit Details</button>
+            </div>
+        </div>
+        <div id="chatInput">
+            <input type="text" id="messageInput" placeholder="Type your message...">
+            <button id="sendButton">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatToggle = document.getElementById('chatToggle');
+        const chatContainer = document.getElementById('chatContainer');
+        const closeChat = document.getElementById('closeChat');
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const detailsForm = document.getElementById('detailsForm');
+        const submitDetails = document.getElementById('submitDetails');
+
+        // Initial greeting
+        addMessage('Hello! I\'m your Secure Garages assistant. How can I help you today?', 'bot');
+
+        chatToggle.addEventListener('click', () => {
+            chatContainer.style.display = 'flex';
+            chatToggle.style.display = 'none';
+        });
+
+        closeChat.addEventListener('click', () => {
+            chatContainer.style.display = 'none';
+            chatToggle.style.display = 'block';
+        });
+
+        function addMessage(message, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(sender + '-message');
+            messageDiv.textContent = message;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                addMessage(message, 'user');
+                messageInput.value = '';
+
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ message })
+                    });
+
+                    const data = await response.json();
+                    addMessage(data.response, 'bot');
+
+                    if (data.needsDetails) {
+                        showDetailsForm();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage('Sorry, there was an error processing your message.', 'bot');
+                }
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        submitDetails.addEventListener('click', async () => {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const address = document.getElementById('address').value;
+            const issue = document.getElementById('issue').value;
+
+            if (name && (email || phone) && address && issue) {
+                try {
+                    const response = await fetch('/api/save-details', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name,
+                            email,
+                            phone,
+                            address,
+                            issue
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        addMessage('Thank you! Your details have been submitted. Our team will contact you shortly.', 'bot');
+                        hideDetailsForm();
+                    } else {
+                        addMessage('Sorry, there was an error submitting your details. Please try again.', 'bot');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage('Sorry, there was an error submitting your details.', 'bot');
+                }
+            } else {
+                addMessage('Please fill in all required fields.', 'bot');
+            }
+        });
+
+        function showDetailsForm() {
+            const form = document.getElementById('detailsForm');
+            const messages = document.getElementById('chatMessages');
+            form.style.display = 'block';
+            
+            // Scroll to the last message
+            const lastMessage = messages.lastElementChild;
+            if (lastMessage) {
+                messages.scrollTop = messages.scrollHeight - messages.clientHeight;
+            }
+        }
+
+        function hideDetailsForm() {
+            const form = document.getElementById('detailsForm');
+            form.style.display = 'none';
+        }
+    </script>
+</body>
+</html> 
